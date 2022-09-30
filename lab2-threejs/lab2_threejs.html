@@ -1,0 +1,108 @@
+<!DOCTYPE HTML>
+<html lang="en">
+
+<head>
+    <title>TNM061 Lab 2: WebGL with three.js</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <style>
+    body {
+        margin: 0px;
+    }
+    .ui {
+    	position: absolute;
+    	left: 0;
+    	top: 0;
+    	border: 1px solid darkgray;
+    	color: white;
+    	background: rgba(200, 200, 200, 0.4);
+    	font-weight: 400;
+    	font-family: sans-serif;
+    	font-size: 100%;
+    	line-height: 130%;
+    	margin: .4em;
+    	padding: .5em;
+    	min-width: 150px;
+    }
+    .heading {
+    	font-size: 110%;
+    	font-weight: 600;
+    	padding-bottom: .2em;
+    }
+    </style>
+</head>
+
+<body>
+    <div class="ui">
+    	<div class="heading">Settings</div>
+    	<div>
+    		<input type="checkbox" id="animation" name="animation" checked>
+    		<label for="animation">Animation</label>
+    	</div>
+    	<div>
+    		<input type="checkbox" id="wireframe" name="wireframe" checked>
+    		<label for="wireframe">Wireframe</label>
+    	</div>
+    </div>
+	<script type="x-shader/x-vertex" id="vertexShader">
+
+			varying vec3 vWorldpos;
+			varying vec3 vNormal;
+			varying vec2 vUv;
+
+			// for built-in uniforms & attributes see https://threejs.org/docs/#api/en/renderers/webgl/WebGLProgram
+
+			void main() {
+				vNormal = normalMatrix * normal;
+				vUv = uv; // texture coordinates
+
+				vec4 worldpos = modelViewMatrix * vec4(position, 1.0);
+				vWorldpos = worldpos.xyz;
+
+				gl_Position = projectionMatrix * worldpos;
+			}
+	</script>
+	<script type="x-shader/x-fragment" id="fragmentShader">
+		struct PointLight {
+			vec3 position;
+			vec3 color;
+		};
+		uniform PointLight pointLights[ NUM_POINT_LIGHTS ];
+		uniform vec3 ambientLightColor;
+
+		varying vec3 vWorldpos;
+		varying vec3 vNormal;
+		varying vec2 vUv;
+
+		uniform sampler2D colorTexture;
+		uniform sampler2D specularMap;
+
+		void main() {
+			vec4 color = texture2D(colorTexture, vUv);
+			vec4 specularColor = texture2D(specularMap, vUv);	
+
+			vec3 normal = normalize(vNormal);
+			
+			vec3 lightDir = normalize(pointLights[0].position - vWorldpos);
+			vec3 diffuse = max(dot(vNormal, lightDir), 0.0) * pointLights[0].color;
+
+			vec3 R = reflect(-lightDir, normal);
+			vec3 V = normalize(cameraPosition-vWorldpos); //calculate view direction
+
+			//Specular lightning
+			float specAngle = max(dot(R,V), 0.0);
+			float value = 20.0;
+			float specular = pow(specAngle, value);
+
+
+			gl_FragColor = vec4(color.xyz * (0.7*diffuse + ambientLightColor + specularColor.r*specular), 1.0);
+		}
+	</script>
+
+    <div id="container"></div>
+
+    <script src="https://threejs.org/build/three.js"></script>
+    <script src="lab2.js"></script>
+</body>
+
+</html>
